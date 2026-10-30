@@ -21,6 +21,10 @@
        01 WS-COMPTE-TROUVER            PIC X(1) VALUE "N".
            88 WS-COMPTE-TROUVER-OUI  VALUE "Y".
            88 WS-COMPTE-TROUVER-NON  VALUE "N".
+       01 WS-MONTANT                   PIC 9(7)V99.
+       01 WS-MONTANT-SAISI             PIC X(20).
+       01 WS-ANCIEN-SOLDE              PIC 9(7)V99.
+       01 WS-INDEX-COMPTE-TROUVE       PIC 9(1).
 
        PROCEDURE DIVISION.
 
@@ -34,6 +38,7 @@
                DISPLAY "1. Creer un compte"
                DISPLAY "2. Afficher les comptes"
                DISPLAY "3. Rechercher un compte"
+               DISPLAY "4. Effectuer un depot"
                DISPLAY "0. Quitter"
                DISPLAY " "
                DISPLAY "Votre choix : " WITH NO ADVANCING
@@ -45,6 +50,8 @@
                        PERFORM LISTE-COMPTE
                    WHEN "3"
                        PERFORM RECHERCHE-COMPTE
+                   WHEN "4"
+                       PERFORM DEPOT-COMPTE
                    WHEN "0"
                        DISPLAY " "
                        DISPLAY "Fermeture du programme..."
@@ -116,7 +123,6 @@
                FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
                ) = 6
                AND WS-RECHERCHE-NUM-SAISI(1:6) IS NUMERIC
-                   SET WS-COMPTE-TROUVER-NON TO TRUE
                    DISPLAY " "
                    DISPLAY "===================================="
                    DISPLAY "RECHERCHE D'UN COMPTE"
@@ -133,35 +139,49 @@
                        WHEN WS-RECHERCHE-NUM-SAISI(1:6) IS NOT NUMERIC
                            DISPLAY " "
                            DISPLAY "Le numero doit contenir 6 chiffres."
-                       WHEN OTHER
-                           MOVE FUNCTION NUMVAL(WS-RECHERCHE-NUM-SAISI)
-                           TO WS-RECHERCHE-NUM
-                           PERFORM VARYING WS-INDEX FROM 1 BY 1
-                               UNTIL WS-INDEX > WS-NB-COMPTES
-                                   IF WS-NUM (WS-INDEX) 
-                                   = WS-RECHERCHE-NUM
-                                       SET WS-COMPTE-TROUVER-OUI TO TRUE
-                                       MOVE WS-SOLDE(WS-INDEX)
-                                       TO WS-SOLDE-AFFICHAGE
-                                       DISPLAY " "
-                                       DISPLAY "Compte trouve !"
-                                       DISPLAY " "
-                                       DISPLAY "Numero de compte : " 
-                                       WS-NUM (WS-INDEX)
-                                       DISPLAY "Titulaire        : " 
-                                       FUNCTION TRIM(WS-NOM (WS-INDEX))
-                                       DISPLAY "Solde initial    : " 
-                                       FUNCTION TRIM(WS-SOLDE-AFFICHAGE) 
-                                       "$"
-                                       EXIT PERFORM 
-                                   END-IF         
-                           END-PERFORM
+                       WHEN OTHER       
+                           PERFORM TROUVER-COMPTE                 
+                           MOVE WS-SOLDE(WS-INDEX)
+                           TO WS-SOLDE-AFFICHAGE
+                           DISPLAY " "
+                           DISPLAY "Compte trouve !"
+                           DISPLAY " "
+                           DISPLAY "Numero de compte : " 
+                           WS-NUM (WS-INDEX)
+                           DISPLAY "Titulaire        : " 
+                           FUNCTION TRIM(WS-NOM (WS-INDEX))
+                           DISPLAY "Solde initial    : " 
+                           FUNCTION TRIM(WS-SOLDE-AFFICHAGE) 
+                           "$"
                            IF WS-COMPTE-TROUVER-NON
                                DISPLAY " "
                                DISPLAY "Aucun compte trouve."
                            END-IF
                    END-EVALUATE
            END-PERFORM.
+
+
+       DEPOT-COMPTE.
+           DISPLAY " "
+           DISPLAY "====================================".
+           DISPLAY "DEPOT BANCAIRE".
+           DISPLAY "====================================".
+           DISPLAY " ".
+
            
+
+       TROUVER-COMPTE.
+           SET WS-COMPTE-TROUVER-NON TO TRUE
+           MOVE FUNCTION NUMVAL(WS-RECHERCHE-NUM-SAISI)
+           TO WS-RECHERCHE-NUM
+           PERFORM VARYING WS-INDEX FROM 1 BY 1
+               UNTIL WS-INDEX > WS-NB-COMPTES
+                   IF WS-NUM (WS-INDEX) = WS-RECHERCHE-NUM
+                       SET WS-COMPTE-TROUVER-OUI TO TRUE
+                       MOVE WS-INDEX TO WS-INDEX-COMPTE-TROUVE
+                       EXIT PERFORM 
+                   END-IF
+           END-PERFORM.    
+
        END PROGRAM BankingSystem.
        

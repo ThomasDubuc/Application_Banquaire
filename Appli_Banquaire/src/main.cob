@@ -23,8 +23,17 @@
            88 WS-COMPTE-TROUVER-NON  VALUE "N".
        01 WS-MONTANT                   PIC 9(7)V99.
        01 WS-MONTANT-SAISI             PIC X(20).
+       01 WS-MONTANT-AFFICHAGE         PIC Z(6)9.99.
+       01 WS-DEPOT-OK                  PIC X(1) VALUE "N".
+           88 WS-DEPOT-OK-OUI          VALUE "Y".
+           88 WS-DEPOT-OK-NON          VALUE "N".
        01 WS-ANCIEN-SOLDE              PIC 9(7)V99.
+       01 WS-ANCIEN-SOLDE-AFFICHAGE    PIC Z(6)9.99.
        01 WS-INDEX-COMPTE-TROUVE       PIC 9(1).
+       01 WS-POSITION-DECIMALE         PIC 9(2) VALUE 0.
+       01 WS-NB-DECIMALES              PIC 9(2) VALUE 0.
+       01 WS-LONGUEUR-MONTANT          PIC 9(2) VALUE 0.
+       01 WS-I                         PIC 9(2) VALUE 0.
 
        PROCEDURE DIVISION.
 
@@ -162,13 +171,120 @@
 
 
        DEPOT-COMPTE.
-           DISPLAY " "
-           DISPLAY "====================================".
-           DISPLAY "DEPOT BANCAIRE".
-           DISPLAY "====================================".
-           DISPLAY " ".
+           MOVE SPACES TO WS-RECHERCHE-NUM-SAISI
+           MOVE SPACES TO WS-MONTANT-SAISI
+           SET WS-DEPOT-OK-NON TO TRUE
+           PERFORM UNTIL FUNCTION LENGTH(
+              FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
+              ) = 6
+              AND WS-RECHERCHE-NUM-SAISI(1:6) IS NUMERIC
+              AND WS-COMPTE-TROUVER-OUI
+                DISPLAY " "
+                DISPLAY "===================================="
+                DISPLAY "DEPOT BANCAIRE"
+                DISPLAY "===================================="
+                DISPLAY " "
+                DISPLAY "Numero de compte : " WITH NO ADVANCING
+                ACCEPT WS-RECHERCHE-NUM-SAISI
+                EVALUATE TRUE
+                    WHEN FUNCTION LENGTH(
+                    FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
+                    ) NOT EQUAL TO 6
+                        DISPLAY " "
+                        DISPLAY "Longueur invalide !"
+                    WHEN WS-RECHERCHE-NUM-SAISI(1:6) IS NOT NUMERIC
+                        DISPLAY " "
+                        DISPLAY "Le numero doit contenir 6 chiffres."
+                    WHEN OTHER     
+                       PERFORM TROUVER-COMPTE
+                       IF WS-COMPTE-TROUVER-NON
+                          EXIT PERFORM
+                       END-IF
+                       MOVE WS-SOLDE(WS-INDEX-COMPTE-TROUVE)
+                       TO WS-ANCIEN-SOLDE
+                       PERFORM UNTIL WS-DEPOT-OK-OUI
+                          DISPLAY " "
+                          DISPLAY "Montant a deposer : " 
+                          WITH NO ADVANCING
+                          ACCEPT WS-MONTANT-SAISI
+                       
+                       MOVE FUNCTION LENGTH(
+                          FUNCTION TRIM(WS-MONTANT-SAISI)
+                       ) TO WS-LONGUEUR-MONTANT
+                       MOVE 0 TO WS-POSITION-DECIMALE
+                       MOVE 0 TO WS-NB-DECIMALES
+                       PERFORM VARYING WS-I FROM 1 BY 1
+                          UNTIL WS-I > WS-LONGUEUR-MONTANT
+                             IF WS-MONTANT-SAISI(WS-I:1) = "."
+                                MOVE WS-I TO WS-POSITION-DECIMALE
+                             END-IF
+                       END-PERFORM
+                       IF WS-POSITION-DECIMALE > 0
+                          COMPUTE WS-NB-DECIMALES =
+                          WS-LONGUEUR-MONTANT - WS-POSITION-DECIMALE
+                       END-IF
+                       EVALUATE TRUE
+                          WHEN FUNCTION TEST-NUMVAL(
+                          FUNCTION TRIM(WS-MONTANT-SAISI TRAILING)
+                          ) NOT = 0
+                             DISPLAY " "
+                             DISPLAY 
+                             "Veuillez entrer un montant numerique"
+                          WHEN FUNCTION NUMVAL(WS-MONTANT-SAISI) <= 0
+                             DISPLAY " "
+                             DISPLAY 
+                             "Le montant doit etre superieur a 0"
 
-           
+                          WHEN FUNCTION NUMVAL(WS-MONTANT-SAISI)
+                           > 999999.99
+                             DISPLAY " "
+                             DISPLAY 
+                             "Le montant ne doit pas depasser 99999.99"
+                          WHEN WS-NB-DECIMALES > 2
+                             DISPLAY " "
+                             DISPLAY 
+                             "Maximum 2 chiffres apres la virgule"
+                          WHEN OTHER
+                             SET WS-DEPOT-OK-OUI TO TRUE
+                       END-EVALUATE
+                       END-PERFORM
+                       IF WS-DEPOT-OK-OUI
+                          MOVE FUNCTION NUMVAL(WS-MONTANT-SAISI)
+                          TO WS-MONTANT
+                          IF WS-MONTANT + 
+                          WS-SOLDE(WS-INDEX-COMPTE-TROUVE) > 9999999.99
+                             DISPLAY " "
+                             DISPLAY 
+                             "Le solde ne doit pas depasser 9999999.99"
+                             EXIT PERFORM
+                          ELSE
+                             CONTINUE
+                          END-IF
+                          ADD WS-MONTANT 
+                          TO WS-SOLDE(WS-INDEX-COMPTE-TROUVE)
+                          MOVE WS-SOLDE(WS-INDEX-COMPTE-TROUVE)
+                          TO WS-SOLDE-AFFICHAGE
+                          MOVE WS-ANCIEN-SOLDE 
+                          TO WS-ANCIEN-SOLDE-AFFICHAGE
+                          MOVE WS-MONTANT TO WS-MONTANT-AFFICHAGE
+                          DISPLAY " "
+                          DISPLAY "Depot effectue avec succes !"
+                          DISPLAY " "
+                          DISPLAY "Ancien solde : " 
+                          FUNCTION TRIM(WS-ANCIEN-SOLDE-AFFICHAGE)"$"
+                          DISPLAY "Montant depose : " 
+                          FUNCTION TRIM(WS-MONTANT-AFFICHAGE) "$"
+                          DISPLAY "Nouveau solde : " 
+                          FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
+                       END-IF
+                       IF WS-COMPTE-TROUVER-NON
+                          DISPLAY " "
+                          DISPLAY "Aucun compte trouve."
+                       END-IF   
+                END-EVALUATE
+           END-PERFORM.
+
+
 
        TROUVER-COMPTE.
            SET WS-COMPTE-TROUVER-NON TO TRUE

@@ -149,19 +149,21 @@
                            DISPLAY " "
                            DISPLAY "Le numero doit contenir 6 chiffres."
                        WHEN OTHER       
-                           PERFORM TROUVER-COMPTE                 
-                           MOVE WS-SOLDE(WS-INDEX)
-                           TO WS-SOLDE-AFFICHAGE
-                           DISPLAY " "
-                           DISPLAY "Compte trouve !"
-                           DISPLAY " "
-                           DISPLAY "Numero de compte : " 
-                           WS-NUM (WS-INDEX)
-                           DISPLAY "Titulaire        : " 
-                           FUNCTION TRIM(WS-NOM (WS-INDEX))
-                           DISPLAY "Solde initial    : " 
-                           FUNCTION TRIM(WS-SOLDE-AFFICHAGE) 
-                           "$"
+                           PERFORM TROUVER-COMPTE
+                           IF WS-COMPTE-TROUVER-OUI                 
+                               MOVE WS-SOLDE(WS-INDEX)
+                               TO WS-SOLDE-AFFICHAGE
+                               DISPLAY " "
+                               DISPLAY "Compte trouve !"
+                               DISPLAY " "
+                               DISPLAY "Numero de compte : " 
+                               WS-NUM (WS-INDEX)
+                               DISPLAY "Titulaire        : " 
+                               FUNCTION TRIM(WS-NOM (WS-INDEX))
+                               DISPLAY "Solde actuel    : " 
+                               FUNCTION TRIM(WS-SOLDE-AFFICHAGE) 
+                               "$"
+                           END-IF    
                            IF WS-COMPTE-TROUVER-NON
                                DISPLAY " "
                                DISPLAY "Aucun compte trouve."
@@ -198,7 +200,9 @@
                     WHEN OTHER     
                        PERFORM TROUVER-COMPTE
                        IF WS-COMPTE-TROUVER-NON
-                          EXIT PERFORM
+                           DISPLAY " "
+                           DISPLAY "Aucun compte trouve."
+                           EXIT PERFORM
                        END-IF
                        MOVE WS-SOLDE(WS-INDEX-COMPTE-TROUVE)
                        TO WS-ANCIEN-SOLDE
@@ -215,7 +219,8 @@
                        MOVE 0 TO WS-NB-DECIMALES
                        PERFORM VARYING WS-I FROM 1 BY 1
                           UNTIL WS-I > WS-LONGUEUR-MONTANT
-                             IF WS-MONTANT-SAISI(WS-I:1) = "."
+                             IF FUNCTION TRIM(WS-MONTANT-SAISI)(WS-I:1)
+                             = "."
                                 MOVE WS-I TO WS-POSITION-DECIMALE
                              END-IF
                        END-PERFORM
@@ -236,10 +241,10 @@
                              "Le montant doit etre superieur a 0"
 
                           WHEN FUNCTION NUMVAL(WS-MONTANT-SAISI)
-                           > 999999.99
+                           > 100000.00
                              DISPLAY " "
                              DISPLAY 
-                             "Le montant ne doit pas depasser 99999.99"
+                             "Le montant ne doit pas depasser 100 000"
                           WHEN WS-NB-DECIMALES > 2
                              DISPLAY " "
                              DISPLAY 
@@ -257,8 +262,6 @@
                              DISPLAY 
                              "Le solde ne doit pas depasser 9999999.99"
                              EXIT PERFORM
-                          ELSE
-                             CONTINUE
                           END-IF
                           ADD WS-MONTANT 
                           TO WS-SOLDE(WS-INDEX-COMPTE-TROUVE)
@@ -276,11 +279,7 @@
                           FUNCTION TRIM(WS-MONTANT-AFFICHAGE) "$"
                           DISPLAY "Nouveau solde : " 
                           FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
-                       END-IF
-                       IF WS-COMPTE-TROUVER-NON
-                          DISPLAY " "
-                          DISPLAY "Aucun compte trouve."
-                       END-IF   
+                       END-IF  
                 END-EVALUATE
            END-PERFORM.
 

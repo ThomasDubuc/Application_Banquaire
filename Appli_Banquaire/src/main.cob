@@ -30,6 +30,8 @@
        01 WS-ANCIEN-SOLDE              PIC 9(7)V99.
        01 WS-ANCIEN-SOLDE-AFFICHAGE    PIC Z(6)9.99.
        01 WS-INDEX-COMPTE-TROUVE       PIC 9(1).
+       01 WS-INDEX-SOURCE      PIC 9(1).
+       01 WS-INDEX-DESTINATION PIC 9(1).
        01 WS-POSITION-DECIMALE         PIC 9(2) VALUE 0.
        01 WS-NB-DECIMALES              PIC 9(2) VALUE 0.
        01 WS-LONGUEUR-MONTANT          PIC 9(2) VALUE 0.
@@ -50,6 +52,7 @@
                DISPLAY "3. Rechercher un compte"
                DISPLAY "4. Effectuer un depot"
                DISPLAY "5. Effectuer un retrait"
+               DISPLAY "6. Effectuer un virement"
                DISPLAY "0. Quitter"
                DISPLAY " "
                DISPLAY "Votre choix : " WITH NO ADVANCING
@@ -65,6 +68,8 @@
                        PERFORM DEPOT-COMPTE
                    WHEN "5"
                        PERFORM RETRAIT-COMPTE
+                   WHEN "6"
+                       PERFORM VIREMENT-COMPTE
                    WHEN "0"
                        DISPLAY " "
                        DISPLAY "Fermeture du programme..."
@@ -298,6 +303,124 @@
                        END-IF  
                 END-EVALUATE
            END-PERFORM.
+           
+       VIREMENT-COMPTE.
+           MOVE SPACES TO WS-RECHERCHE-NUM-SAISI
+           MOVE 0 TO WS-INDEX-SOURCE
+           MOVE 0 TO WS-INDEX-DESTINATION
+              DISPLAY " "
+              DISPLAY "===================================="
+              DISPLAY "VIREMENT ENTRE COMPTES"
+              DISPLAY "===================================="
+              DISPLAY " "
+              PERFORM UNTIL FUNCTION LENGTH(
+                 FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
+                 ) = 6
+                 AND WS-RECHERCHE-NUM-SAISI(1:6) IS NUMERIC
+                 DISPLAY "Numero du compte source : " WITH NO ADVANCING
+                 ACCEPT WS-RECHERCHE-NUM-SAISI
+                 EVALUATE TRUE
+                    WHEN FUNCTION LENGTH(
+                    FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
+                    ) NOT EQUAL TO 6
+                        DISPLAY " "
+                        DISPLAY "Longueur invalide !"
+                    WHEN WS-RECHERCHE-NUM-SAISI(1:6) IS NOT NUMERIC
+                        DISPLAY " "
+                        DISPLAY "Le numero doit contenir 6 chiffres."
+                    WHEN OTHER     
+                       PERFORM TROUVER-COMPTE
+                       IF WS-COMPTE-TROUVER-NON
+                           DISPLAY " "
+                           DISPLAY "Aucun compte trouve."
+                           EXIT PERFORM
+                       END-IF
+                       MOVE WS-INDEX-COMPTE-TROUVE TO WS-INDEX-SOURCE
+                 END-EVALUATE
+              END-PERFORM   
+              MOVE SPACES TO WS-RECHERCHE-NUM-SAISI
+              IF WS-COMPTE-TROUVER-OUI
+              PERFORM UNTIL WS-INDEX-DESTINATION > 0
+                 DISPLAY " "
+                 DISPLAY "Numero du compte destination : "
+                 WITH NO ADVANCING
+                 ACCEPT WS-RECHERCHE-NUM-SAISI
+                 EVALUATE TRUE
+                    WHEN FUNCTION LENGTH(
+                    FUNCTION TRIM(WS-RECHERCHE-NUM-SAISI TRAILING)
+                    ) NOT EQUAL TO 6
+                        DISPLAY " "
+                        DISPLAY "Longueur invalide !"
+                    WHEN WS-RECHERCHE-NUM-SAISI(1:6) IS NOT NUMERIC
+                        DISPLAY " "
+                        DISPLAY "Le numero doit contenir 6 chiffres."
+                    WHEN OTHER     
+                       PERFORM TROUVER-COMPTE
+                       EVALUATE TRUE
+                          WHEN WS-COMPTE-TROUVER-NON
+                           DISPLAY " "
+                           DISPLAY "Aucun compte trouve."
+                           EXIT PERFORM
+                          WHEN  WS-INDEX-SOURCE = WS-INDEX-COMPTE-TROUVE
+                           DISPLAY " "
+                           DISPLAY "Erreur : comptes identiques."
+                          WHEN  OTHER
+                           MOVE WS-INDEX-COMPTE-TROUVE 
+                           TO WS-INDEX-DESTINATION
+                       END-EVALUATE
+                 END-EVALUATE
+              END-PERFORM
+              IF WS-INDEX-SOURCE > 0 AND WS-INDEX-DESTINATION > 0     
+              DISPLAY " "
+              DISPLAY "===================================="
+              DISPLAY "COMPTE SOURCE"
+              DISPLAY "===================================="
+              DISPLAY " "      
+              DISPLAY "Titulaire : "
+              FUNCTION TRIM(WS-NOM (WS-INDEX-SOURCE))
+              MOVE WS-SOLDE(WS-INDEX-SOURCE) TO WS-SOLDE-AFFICHAGE
+              DISPLAY "Solde actuel : " 
+              FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
+              DISPLAY " "
+              DISPLAY "===================================="
+              DISPLAY "COMPTE DESTINATION"
+              DISPLAY "===================================="
+              DISPLAY " "        
+              DISPLAY "Titulaire : " FUNCTION 
+              TRIM(WS-NOM (WS-INDEX-DESTINATION))
+              MOVE WS-SOLDE(WS-INDEX-DESTINATION) TO WS-SOLDE-AFFICHAGE
+              DISPLAY "Solde actuel : " 
+              FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
+              PERFORM SAISIR-MONTANT
+                IF WS-MONTANT-VALIDE-OK-OUI
+                EVALUATE TRUE
+                     WHEN WS-MONTANT > WS-SOLDE(WS-INDEX-SOURCE)
+                        DISPLAY " "
+                        DISPLAY "Erreur : solde insuffisant."
+                     WHEN  WS-MONTANT + WS-SOLDE(WS-INDEX-DESTINATION) 
+                     > 9999999.99
+                        DISPLAY " "
+                        DISPLAY "Erreur : limite depassee.."
+                     WHEN  OTHER
+                        SUBTRACT WS-MONTANT 
+                        FROM WS-SOLDE(WS-INDEX-SOURCE)
+                        ADD WS-MONTANT TO WS-SOLDE(WS-INDEX-DESTINATION)
+                        MOVE WS-SOLDE(WS-INDEX-SOURCE) 
+                        TO WS-SOLDE-AFFICHAGE
+                        DISPLAY " "
+                        DISPLAY "Virement effectue avec succes !"
+                        DISPLAY " "
+                        DISPLAY "Nouveau solde du compte source : " 
+                        FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
+                        MOVE WS-SOLDE(WS-INDEX-DESTINATION) 
+                        TO WS-SOLDE-AFFICHAGE
+                        DISPLAY "Nouveau solde du compte destination : " 
+                        FUNCTION TRIM(WS-SOLDE-AFFICHAGE) "$"
+                END-EVALUATE
+                END-IF
+              END-IF
+              END-IF
+           DISPLAY " ".
 
        TROUVER-COMPTE.
            SET WS-COMPTE-TROUVER-NON TO TRUE
@@ -365,6 +488,8 @@
                              TO WS-MONTANT
                        END-EVALUATE
                       END-PERFORM.
+
+      
 
        END PROGRAM BankingSystem.
        

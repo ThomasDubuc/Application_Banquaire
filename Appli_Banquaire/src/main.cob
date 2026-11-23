@@ -3,23 +3,23 @@
        AUTHOR. Thomas Dubuc.
 
 
-       ENVIRONMENT DIVISION.
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT FICHIER-COMPTES
-               ASSIGN TO "comptes.dat"
-               ORGANIZATION IS LINE SEQUENTIAL.
+      * ENVIRONMENT DIVISION.
+      * INPUT-OUTPUT SECTION.
+      * FILE-CONTROL.
+      *     SELECT FICHIER-COMPTES
+      *         ASSIGN TO "comptes.dat"
+      *         ORGANIZATION IS LINE SEQUENTIAL.
 
        DATA DIVISION.
 
-       FILE SECTION.
+      * FILE SECTION.
 
-       FD FICHIER-COMPTES.
-       01 WS-COMPTES-ECRIT.
-           05 WS-COMPTE-ECRIT 
-               10 WS-NUM-ECRIT PIC 9(6).
-               10 WS-NOM-ECRIT PIC X(30).
-               10 WS-SOLDE-ECRIT PIC 9(7)V99.
+      * FD FICHIER-COMPTES.
+      * 01 WS-COMPTES-ECRIT.
+      *     05 WS-COMPTE-ECRIT 
+      *         10 WS-NUM-ECRIT PIC 9(6).
+      *         10 WS-NOM-ECRIT PIC X(30).
+      *         10 WS-SOLDE-ECRIT PIC 9(7)V99.
 
        WORKING-STORAGE SECTION. 
        
